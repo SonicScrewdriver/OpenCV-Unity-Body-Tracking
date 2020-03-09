@@ -1,0 +1,31 @@
+﻿  Source.cpp
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(54,31): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(55,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(122,67): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+          with
+          [
+              _Tp=double
+          ]
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(122,59): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+          with
+          [
+              _Tp=double
+          ]
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(122,46): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+          with
+          [
+              _Tp=double
+          ]
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(122,34): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+          with
+          [
+              _Tp=double
+          ]
+     Creating library C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\x64\Release\OpenCV.lib and object C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\x64\Release\OpenCV.exp
+  Generating code
+C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\OpenCV\Source.cpp(101): warning C4715: 'Init': not all control paths return a value
+  1 of 233 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  OpenCV.vcxproj -> C:\dev\OpenCV-Unity-Object-Tracking\OpenCV\x64\Release\OpenCV.dll
