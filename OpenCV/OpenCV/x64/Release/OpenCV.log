@@ -1,35 +1,30 @@
 ﻿  Source.cpp
 C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(49,31): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
 C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(50,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(114,92): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(144,92): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
           with
           [
               _Tp=double
           ]
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(114,78): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(144,78): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
           with
           [
               _Tp=double
           ]
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(114,59): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(144,59): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
           with
           [
               _Tp=double
           ]
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(114,41): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
-          with
-          [
-              _Tp=double
-          ]
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(119,17): warning C4244: 'initializing': conversion from '_Tp' to 'int', possible loss of data
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(144,41): warning C4244: 'argument': conversion from '_Tp' to 'int', possible loss of data
           with
           [
               _Tp=double
           ]
      Creating library C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.lib and object C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.exp
   Generating code
-  71 of 273 functions (26.0%) were compiled, the rest were copied from previous compilation.
-    41 functions were new in current compilation
-    11 functions had inline decision re-evaluated but remain unchanged
+  19 of 274 functions ( 6.9%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    14 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   OpenCV.vcxproj -> C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.dll

@@ -38,7 +38,7 @@ std::vector<Rect> Bodies;
 extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& outCameraHeight)
 {
 	// Load LBP face cascade.
-	if (!_bodyCascade.load("lbpcascade_frontalface_improved.xml"))
+	if (!_bodyCascade.load("haarcascade_frontalface_default.xml"))
 		return -1;
 
 	// Open the stream.
@@ -65,7 +65,7 @@ extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxDat
 	// vector <string> trackerTypes(types, std::end(types));
 
 	// Create a tracker
-	trackerType = trackerTypes[2];
+	trackerType = trackerTypes[7];
 
 
 	if (trackerType == "BOOSTING")
@@ -93,6 +93,36 @@ extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxDat
 
 }
 
+extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
+	Mat frame;
+	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
+	_capture >> frame;
+	if (frame.empty())
+		return;
+
+	std::vector<Rect> bodies;
+	// Convert the frame to grayscale for cascade detection.
+	Mat grayscaleFrame;
+	cvtColor(frame, grayscaleFrame, COLOR_BGR2GRAY);
+	Mat resizedGray;
+	// Scale down for better performance.
+	resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
+	equalizeHist(resizedGray, resizedGray);
+
+	// Detect faces.
+	_bodyCascade.detectMultiScale(resizedGray, bodies);
+
+	// Draw faces.
+	for (size_t i = 0; i < bodies.size(); i++)
+	{
+		rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+	}
+	Bodies = bodies;
+	patientBox = Bodies[0];
+
+	// Display debug output.
+	imshow("tracker", frame);
+}
 
 // Expose the function for DLL
 extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, int maxOutTrackingCount, int& outDetectedTrackingCount)
@@ -116,8 +146,7 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		else
 		{
 			// Tracking failure detected.
-			int patientX = patientBox.x;
-			putText(frame, "Tracking failure detected :" + patientX, Point(100, 80), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0, 0, 255), 2);
+			RefindPatient();
 		}
 
 		// Display tracker type on frame
