@@ -1,3 +1,8 @@
+#include <dlib/image_processing/frontal_face_detector.h>
+#include <dlib/image_processing/render_face_detections.h>
+#include <dlib/image_processing.h>
+#include <dlib/gui_widgets.h>
+#include <dlib/image_io.h>
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -10,17 +15,23 @@
 #include <cstring>
 #include <ctime>
 
+
 using namespace std;
 using namespace cv;
+using namespace dlib;
+
+
 // OBJECT TRACKING PROTOTYPE
+
+
 
 // Convert to string
 #define SSTR( x ) static_cast< std::ostringstream & >( \
 ( std::ostringstream() << std::dec << x ) ).str()
 
-// Object Tracking Rectangles!
-struct Rectangle {
-	Rectangle(int width, int height, int x, int y) : Width(width), Height(height), X(x), Y(y) {}
+// Object Tracking Rectangles (Renamed BodyBox after Dlib Import)!
+struct BodyBox {
+	BodyBox(int width, int height, int x, int y) : Width(width), Height(height), X(x), Y(y) {}
 	int Width, Height, X, Y;
 };
 
@@ -33,6 +44,7 @@ string trackerType;
 Rect2d patientBox;
 bool patientSet;
 std::vector<Rect> Bodies;
+
 
 
 extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& outCameraHeight)
@@ -86,9 +98,9 @@ extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxDat
 		tracker = TrackerCSRT::create();
 
 
-	rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
+	cv::rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
 
-	imshow("Tracking", frame);
+	cv::imshow("Tracking", frame);
 	bool trackerInit = tracker->init(frame, patientBox);
 
 }
@@ -115,17 +127,17 @@ extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 	// Draw faces.
 	for (size_t i = 0; i < bodies.size(); i++)
 	{
-		rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		cv::rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
 	}
 	Bodies = bodies;
 	patientBox = Bodies[0];
 
 	// Display debug output.
-	imshow("tracker", frame);
+	cv::imshow("tracker", frame);
 }
 
 // Expose the function for DLL
-extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, int maxOutTrackingCount, int& outDetectedTrackingCount)
+extern "C" void __declspec(dllexport) __stdcall  Track(BodyBox * outTracking, int maxOutTrackingCount, int& outDetectedTrackingCount)
 {
 	if (patientSet) {
 		Mat frame;
@@ -140,8 +152,8 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		if (ok)
 		{
 			// Tracking success : Draw the tracked object
-			rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
-			outTracking[0] = Rectangle(patientBox.width, patientBox.height, patientBox.x, patientBox.y);
+			cv::rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
+			outTracking[0] = BodyBox(patientBox.width, patientBox.height, patientBox.x, patientBox.y);
 		}
 		else
 		{
@@ -153,7 +165,7 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		putText(frame, trackerType + " Tracker", Point(100, 20), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(50, 170, 50), 2);
 
 		// Display frame.
-		imshow("Tracking", frame);
+		cv::imshow("Tracking", frame);
 	}
 
 }
@@ -168,7 +180,7 @@ extern "C" void __declspec(dllexport) __stdcall SetScale(int scale)
 	_scale = scale;
 }
 
-extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, int maxOutBodiesCount, int& outDetectedBodiesCount)
+extern "C" void __declspec(dllexport) __stdcall Detect(BodyBox * outBodies, int maxOutBodiesCount, int& outDetectedBodiesCount)
 {
 	Mat frame;
 	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
@@ -185,16 +197,17 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, in
 	resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
 	equalizeHist(resizedGray, resizedGray);
 
+
 	// Detect faces.
 	_bodyCascade.detectMultiScale(resizedGray, bodies);
 
 	// Draw faces.
 	for (size_t i = 0; i < bodies.size(); i++)
 	{
-		rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		cv::rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
 
 		// Send to application.
-		outBodies[i] = Rectangle(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
+		outBodies[i] = BodyBox(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
 		outDetectedBodiesCount++;
 
 		if (outDetectedBodiesCount == maxOutBodiesCount)
@@ -203,5 +216,5 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, in
 	Bodies = bodies;
 
 	// Display debug output.
-	imshow("tracker", frame);
+	cv::imshow("tracker", frame);
 }
