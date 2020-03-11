@@ -1,8 +1,7 @@
-#include <dlib/image_processing/frontal_face_detector.h>
-#include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
 #include <dlib/gui_widgets.h>
 #include <dlib/image_io.h>
+#include <dlib/dir_nav.h>
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -39,10 +38,14 @@ CascadeClassifier _bodyCascade;
 String _windowName = "Unity OpenCV Prototype #2";
 VideoCapture _capture;
 int _scale = 1;
-Ptr<Tracker> tracker;
+correlation_tracker tracker;
+std::vector<correlation_tracker> faceTrackers;
+std::vector<String> faceNames;
 string trackerType;
 Rect2d patientBox;
 bool patientSet;
+int currentFaceID = 0;
+int frameCounter = 0;
 std::vector<Rect> Bodies;
 
 
@@ -62,48 +65,185 @@ extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& o
 	outCameraHeight = _capture.get(CAP_PROP_FRAME_HEIGHT);
 
 
+	//Create two opencv named windows
+		cv::namedWindow("Input", cv::WINDOW_AUTOSIZE);
+		cv::namedWindow("Output", cv::WINDOW_AUTOSIZE);
+
+		//Position the windows next to eachother
+		cv::moveWindow("Input", 0, 100);
+		cv::moveWindow("Output", 400, 100);
+
+		//Start the window thread for the two windows we are using
+		cv::startWindowThread();
+
+
+		// Variables holding the current frame number and the current faceid
+		frameCounter = 0;
+		currentFaceID = 0;
+
+		// Variables holding the correlation trackers and the name per faceid - cleared for init
+		faceTrackers.clear();
+		faceNames.clear();
+
+
 }
-extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxData)
+extern "C" void __declspec(dllexport) __stdcall  RecognizePerson(size_t id)
 {
-	patientBox = Bodies[0];
-	patientSet = true;
+	faceNames[id] = ("Person " + id);
+}
+extern "C" void __declspec(dllexport) __stdcall Detect(BodyBox * outBodies, int maxOutBodiesCount, int& outDetectedBodiesCount)
+{
 	Mat frame;
-
+	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
 	_capture >> frame;
-	bool ok = _capture.read(frame);
+	if (frame.empty())
+		return;
 
-	// List of tracker types in OpenCV 3.4.1
-	string trackerTypes[8] = { "BOOSTING", "MIL", "KCF", "TLD","MEDIANFLOW", "GOTURN", "MOSSE", "CSRT" };
-	// vector <string> trackerTypes(types, std::end(types));
-
-	// Create a tracker
-	trackerType = trackerTypes[7];
+	frameCounter += 1;
 
 
-	if (trackerType == "BOOSTING")
-		tracker = TrackerBoosting::create();
-	if (trackerType == "MIL")
-		tracker = TrackerMIL::create();
-	if (trackerType == "KCF")
-		tracker = TrackerKCF::create();
-	if (trackerType == "TLD")
-		tracker = TrackerTLD::create();
-	if (trackerType == "MEDIANFLOW")
-		tracker = TrackerMedianFlow::create();
-	if (trackerType == "GOTURN")
-		tracker = TrackerGOTURN::create();
-	if (trackerType == "MOSSE")
-		tracker = TrackerMOSSE::create();
-	if (trackerType == "CSRT")
-		tracker = TrackerCSRT::create();
+
+	std::vector<int> idsToDelete;
+	std::vector<Rect> bodies;
+	std::vector<Rect> keys;
 
 
-	cv::rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
+	for (size_t i = 0; i < faceTrackers.size(); i++) {
+			int trackingQuality = faceTrackers[i].update(frame);
 
-	cv::imshow("Tracking", frame);
-	bool trackerInit = tracker->init(frame, patientBox);
+			//If the tracking quality is good enough, we must delete
+		//this tracker
+			if (trackingQuality < 7) {
+				idsToDelete.push_back(i);
+			}
+
+			for (size_t i = 0; i < idsToDelete.size(); i++) {
+				size_t id = idsToDelete[i];
+				faceTrackers.erase(faceTrackers.erase(faceTrackers.begin() + id));
+			}
+		
+	}
+	// Every Ten Frames, rerun the cascade to ensure we're still tracking the selected object
+	if (frameCounter % 10 == 0) {
+		// Convert the frame to grayscale for cascade detection.
+		Mat grayscaleFrame;
+		cvtColor(frame, grayscaleFrame, COLOR_BGR2GRAY);
+		Mat resizedGray;
+		// Scale down for better performance.
+		resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
+		equalizeHist(resizedGray, resizedGray);
+
+		// Detect faces.
+		_bodyCascade.detectMultiScale(resizedGray, bodies);
+
+		// Draw faces.
+		for (size_t i = 0; i < bodies.size(); i++)
+		{
+			// Set up coordinates for center detection 
+				int x = bodies[i].x;
+				int y = bodies[i].y;
+				int w = bodies[i].width;
+				int h = bodies[i].height;
+
+				// calculate the centerpoint
+				int	x_bar = x + 0.5 * w;
+				int	y_bar = y + 0.5 * h;
+
+				correlation_tracker matchedid;
+				bool matched = false;
+
+				// Loop through the trackers and check if the center point is in the box of a tracker
+				for (size_t i = 0; i < faceTrackers.size(); i++) {
+					drectangle tracked_position = faceTrackers[i].get_position();
+
+					// Set the Tracker coordinates
+					int t_x = int(tracked_position.left());
+					int t_y = int(tracked_position.top());
+					int t_w = int(tracked_position.width());
+					int t_h = int(tracked_position.height());
+					
+					//calculate the centerpoint
+					int t_x_bar = t_x + 0.5 * t_w;
+					int t_y_bar = t_y + 0.5 * t_h;
+
+					// Check if the center point of the face is within the rectangle of the tracker & the region detected as a face
+					// face fit
+					bool fxfit = (t_x <= x_bar <= (t_x + t_w));
+					bool fyfit = (t_y <= y_bar <= (t_y + t_h));
+					// current track fit
+					bool txfit = (x <= t_x_bar <= (x + w));
+					bool tyfit = (y <= t_y_bar <= (y + h));
+
+					if (fxfit && fyfit && txfit && tyfit) {
+						matchedid = faceTrackers[i];
+						matched = true;
+					}
+
+					if (!matched) {
+						print("Creating new tracker " + currentFaceID);
+
+						// Create + store the tracker
+						tracker = dlib::correlation_tracker();
+						tracker.start_track(frame,
+							dlib::rectangle(x - 10,
+								y - 20,
+								x + w + 10,
+								y + h + 20));
+
+						faceTrackers[currentFaceID] = tracker;
+
+							//Recognize the face 
+							RecognizePerson(currentFaceID);
+
+							// Increase the currentFaceID counter
+							currentFaceID += 1;
+
+
+
+					}
+					
+				}
+
+			// Send to application.
+			outBodies[i] = BodyBox(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
+			outDetectedBodiesCount++;
+
+			if (outDetectedBodiesCount == maxOutBodiesCount)
+				break;
+		}
+		Bodies = bodies;
+	}
+
+	for (size_t i = 0; i < faceTrackers.size(); i++) {
+		drectangle tracked_position = faceTrackers[i].get_position();
+
+			int t_x = int(tracked_position.left());
+			int t_y = int(tracked_position.top());
+			int t_w = int(tracked_position.width());
+			int t_h = int(tracked_position.height());
+			cv::Point pt1(t_x, t_y);
+			cv::Point pt2((t_x + t_w), (t_y + t_h));
+			cv::rectangle(frame, pt1, pt2, Scalar(255, 0, 0), 1);
+
+
+			if (i < faceNames.size()) {
+				cv::putText(frame, faceNames[i],
+					(cv::Point(t_x + t_w / 2), cv::Point(t_y)),
+					cv::FONT_HERSHEY_SIMPLEX,
+					0.5, (255, 255, 255), 2);
+			}
+			else {
+				cv::putText(frame, "Detecting...",
+					(cv::Point(t_x + t_w / 2), cv::Point(t_y)),
+					cv::FONT_HERSHEY_SIMPLEX,
+					0.5, (255, 255, 255), 2);
+			}
+
+
+		cv::imshow("Output", frame);
 
 }
+	}
 
 extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 	Mat frame;
@@ -136,7 +276,7 @@ extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 	cv::imshow("tracker", frame);
 }
 
-// Expose the function for DLL
+// Expose the function for DLL /*
 extern "C" void __declspec(dllexport) __stdcall  Track(BodyBox * outTracking, int maxOutTrackingCount, int& outDetectedTrackingCount)
 {
 	if (patientSet) {
@@ -147,9 +287,9 @@ extern "C" void __declspec(dllexport) __stdcall  Track(BodyBox * outTracking, in
 		}
 
 		// Update the tracking result
-		bool ok = tracker->update(frame, patientBox);
+		//bool ok = tracker->update(frame, patientBox);
 
-		if (ok)
+		if (true)
 		{
 			// Tracking success : Draw the tracked object
 			cv::rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
@@ -169,7 +309,6 @@ extern "C" void __declspec(dllexport) __stdcall  Track(BodyBox * outTracking, in
 	}
 
 }
-
 extern "C" void __declspec(dllexport) __stdcall  Close()
 {
 	_capture.release();
@@ -178,43 +317,4 @@ extern "C" void __declspec(dllexport) __stdcall  Close()
 extern "C" void __declspec(dllexport) __stdcall SetScale(int scale)
 {
 	_scale = scale;
-}
-
-extern "C" void __declspec(dllexport) __stdcall Detect(BodyBox * outBodies, int maxOutBodiesCount, int& outDetectedBodiesCount)
-{
-	Mat frame;
-	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
-	_capture >> frame;
-	if (frame.empty())
-		return;
-
-	std::vector<Rect> bodies;
-	// Convert the frame to grayscale for cascade detection.
-	Mat grayscaleFrame;
-	cvtColor(frame, grayscaleFrame, COLOR_BGR2GRAY);
-	Mat resizedGray;
-	// Scale down for better performance.
-	resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
-	equalizeHist(resizedGray, resizedGray);
-
-
-	// Detect faces.
-	_bodyCascade.detectMultiScale(resizedGray, bodies);
-
-	// Draw faces.
-	for (size_t i = 0; i < bodies.size(); i++)
-	{
-		cv::rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
-
-		// Send to application.
-		outBodies[i] = BodyBox(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
-		outDetectedBodiesCount++;
-
-		if (outDetectedBodiesCount == maxOutBodiesCount)
-			break;
-	}
-	Bodies = bodies;
-
-	// Display debug output.
-	cv::imshow("tracker", frame);
 }

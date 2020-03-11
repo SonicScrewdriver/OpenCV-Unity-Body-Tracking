@@ -1,9 +1,84 @@
 ﻿  Source.cpp
-     Creating library C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.lib and object C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.exp
-  Generating code
-C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(65): warning C4715: 'Init': not all control paths return a value
-  41 of 295 functions (13.9%) were compiled, the rest were copied from previous compilation.
-    22 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
-  Finished generating code
-  OpenCV.vcxproj -> C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\x64\Release\OpenCV.dll
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(171,47): warning C4804: '<=': unsafe use of type 'bool' in operation
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(172,47): warning C4804: '<=': unsafe use of type 'bool' in operation
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(174,43): warning C4804: '<=': unsafe use of type 'bool' in operation
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(175,43): warning C4804: '<=': unsafe use of type 'bool' in operation
+C:\dev\OpenCV\OpenCV 4.2\include\opencv2\core\cvstd_wrapper.hpp(100,1): error C2664: 'std::shared_ptr<T>::shared_ptr(std::shared_ptr<T> &&) noexcept': cannot convert argument 1 from 'Y *' to 'std::nullptr_t'
+          with
+          [
+              T=cv::Formatted
+          ]
+          and
+          [
+              Y=const char
+          ]
+C:\dev\OpenCV\OpenCV 4.2\include\opencv2\core\cvstd_wrapper.hpp(100,69): message : nullptr can only be converted to pointer or handle types
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.24.28314\include\memory(1017,5): message : see declaration of 'std::shared_ptr<T>::shared_ptr'
+          with
+          [
+              T=cv::Formatted
+          ]
+C:\dev\OpenCV\OpenCV 4.2\include\opencv2\core\cvstd_wrapper.hpp(103): message : see reference to function template instantiation 'cv::Ptr<cv::Formatted>::Ptr<Y>(const std::false_type &,Y *)' being compiled
+          with
+          [
+              Y=const char
+          ]
+C:\dev\OpenCV\OpenCV 4.2\include\opencv2\core\cvstd_wrapper.hpp(103): message : see reference to function template instantiation 'cv::Ptr<cv::Formatted>::Ptr<Y>(const std::false_type &,Y *)' being compiled
+          with
+          [
+              Y=const char
+          ]
+C:\dev\OpenCV\OpenCV 4.2\include\opencv2\core\cvstd.inl.hpp(81): message : see reference to function template instantiation 'cv::Ptr<cv::Formatted>::Ptr<const char>(Y *)' being compiled
+          with
+          [
+              Y=const char
+          ]
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(183): message : see reference to function template instantiation 'cv::Ptr<cv::Formatted>::Ptr<const char>(Y *)' being compiled
+          with
+          [
+              Y=const char
+          ]
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.24.28314\include\chrono(632): message : see reference to class template instantiation 'std::chrono::duration<double,std::ratio<1,1>>' being compiled
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.24.28314\include\chrono(178): message : see reference to class template instantiation 'std::chrono::duration<__int64,std::nano>' being compiled
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.24.28314\include\chrono(610): message : see reference to class template instantiation 'std::chrono::time_point<std::chrono::steady_clock,std::chrono::nanoseconds>' being compiled
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301,56): error C2027: use of undefined type 'dlib::image_traits<image_type>'
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301): message : see declaration of 'dlib::image_traits<image_type>'
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(65): message : see reference to function template instantiation 'dlib::point_transform_affine dlib::correlation_tracker::make_chip<image_type>(const image_type &,dlib::drectangle,std::vector<dlib::matrix<std::complex<double>,0,0,dlib::default_memory_manager,dlib::row_major_layout>,std::allocator<dlib::matrix<std::complex<double>,0,0,dlib::default_memory_manager,dlib::row_major_layout>>> &) const' being compiled
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\OpenCV-Unity-Body-Tracking\OpenCV\OpenCV\Source.cpp(191): message : see reference to function template instantiation 'void dlib::correlation_tracker::start_track<cv::Mat>(const image_type &,const dlib::drectangle &)' being compiled
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301,1): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301,67): error C2146: syntax error: missing ';' before identifier 'pixel_type'
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301,1): warning C4091: '': ignored on left of 'int' when no variable is declared
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(237,56): error C2027: use of undefined type 'dlib::image_traits<image_type>'
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(301): message : see declaration of 'dlib::image_traits<image_type>'
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(79): message : see reference to function template instantiation 'void dlib::correlation_tracker::make_scale_space<image_type>(const image_type &,std::vector<dlib::matrix<std::complex<double>,0,1,dlib::default_memory_manager,dlib::row_major_layout>,std::allocator<dlib::matrix<std::complex<double>,0,1,dlib::default_memory_manager,dlib::row_major_layout>>> &) const' being compiled
+          with
+          [
+              image_type=cv::Mat
+          ]
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(237,1): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(237,67): error C2146: syntax error: missing ';' before identifier 'pixel_type'
+C:\dev\dlib\dlib-19.19\dlib\image_processing\correlation_tracker.h(237,1): warning C4091: '': ignored on left of 'int' when no variable is declared
