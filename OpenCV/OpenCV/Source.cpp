@@ -88,7 +88,7 @@ extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxDat
 
 	rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
 
-	imshow("Tracking", frame);
+	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 	bool trackerInit = tracker->init(frame, patientBox);
 
 }
@@ -111,17 +111,45 @@ extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 
 	// Detect faces.
 	_bodyCascade.detectMultiScale(resizedGray, bodies);
-
+	int maxArea = 0;
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
 	// Draw faces.
 	for (size_t i = 0; i < bodies.size(); i++)
 	{
-		rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		//rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		Rect2d tracked_position = bodies[i];
+
+		// Set the Tracker coordinates
+		int _x = int(tracked_position.x);
+		int _y = int(tracked_position.y);
+		int _w = int(tracked_position.width);
+		int _h = int(tracked_position.height);
+
+		// Get the Biggest Face
+		if (_w * _h > maxArea) {
+			x = _x;
+			y = _y;
+			w = _w;
+			h = _h;
+			maxArea = w * h;
+		}
+
+	}
+	if (maxArea > 0) {
+		patientBox = Rect2d(x, y, w, h);
+		rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
+		putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
+		tracker = TrackerCSRT::create();
+		bool trackerInit = tracker->init(frame, patientBox);
 	}
 	Bodies = bodies;
-	patientBox = Bodies[0];
 
+	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 	// Display debug output.
-	imshow("tracker", frame);
+	cv::imshow("Output", frame);
 }
 
 // Expose the function for DLL
@@ -140,7 +168,8 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		if (ok)
 		{
 			// Tracking success : Draw the tracked object
-			rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
+			rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
+			putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
 			outTracking[0] = Rectangle(patientBox.width, patientBox.height, patientBox.x, patientBox.y);
 		}
 		else
@@ -150,10 +179,10 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		}
 
 		// Display tracker type on frame
-		putText(frame, trackerType + " Tracker", Point(100, 20), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(50, 170, 50), 2);
+		putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 
 		// Display frame.
-		imshow("Tracking", frame);
+		cv::imshow("Output", frame);
 	}
 
 }
@@ -187,11 +216,31 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, in
 
 	// Detect faces.
 	_bodyCascade.detectMultiScale(resizedGray, bodies);
-
+	int maxArea = 0;
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
 	// Draw faces.
 	for (size_t i = 0; i < bodies.size(); i++)
 	{
-		rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		//rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
+		Rect2d tracked_position = bodies[i];
+
+		// Set the Tracker coordinates
+		int _x = int(tracked_position.x);
+		int _y = int(tracked_position.y);
+		int _w = int(tracked_position.width);
+		int _h = int(tracked_position.height);
+
+		// Get the Biggest Face
+		if (_w * _h > maxArea) {
+			x = _x;
+			y = _y;
+			w = _w;
+			h = _h;
+			maxArea = w * h;
+		}
 
 		// Send to application.
 		outBodies[i] = Rectangle(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
@@ -200,8 +249,17 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, in
 		if (outDetectedBodiesCount == maxOutBodiesCount)
 			break;
 	}
-	Bodies = bodies;
+	if (maxArea > 0) {
+		patientBox = Rect2d(x, y, w, h);
+		rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
+		
+		putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
 
+		tracker = TrackerCSRT::create();
+		bool trackerInit = tracker->init(frame, patientBox);
+	}
+	Bodies = bodies;
+	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 	// Display debug output.
-	imshow("tracker", frame);
+	cv::imshow("Output", frame);
 }

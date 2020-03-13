@@ -48,6 +48,7 @@ public class OpenCVBodyTracking : MonoBehaviour
     private CvRectangle[] _tracking;
     private CvRectangle[] _bodies;
     private CvRectangle patientBody;
+    public int frameRate = 0;
 
     // Start is called before the first frame update
     void Start()
@@ -88,6 +89,7 @@ public class OpenCVBodyTracking : MonoBehaviour
         NormalizedTrackingPositions = new List<Vector2>();
         OpenCVInterop.SetScale(DetectionDownScale);
         DetectBodies();
+        frameRate = 0;
         _ready = SetPatient();
     }
 
@@ -102,11 +104,22 @@ public class OpenCVBodyTracking : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        frameRate++;
         if (!_ready)
         {
             return;
         }
-        PatientTracking();
+        else
+        {
+            if (frameRate % 60 == 0)
+            {
+                DetectBodies();
+            }
+            else
+            {
+                PatientTracking();
+            }
+        }
 
     }
     void PatientTracking()
@@ -125,7 +138,7 @@ public class OpenCVBodyTracking : MonoBehaviour
         {
             NormalizedTrackingPositions.Add(new Vector2((_tracking[i].X * DetectionDownScale) / CameraResolution.x, 1f - ((_tracking[i].Y * DetectionDownScale) / CameraResolution.y)));
         }
-        Debug.Log("Patient At:" + _tracking[0].X + _tracking[0].Y + _tracking[0].Width + _tracking[0].Height);
+        Debug.Log("Patient At: (x=" + _tracking[0].X + " y=" + _tracking[0].Y + " width=" + _tracking[0].Width + " height=" + _tracking[0].Height + ")");
     }
 
     void DetectBodies()
