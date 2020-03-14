@@ -10,117 +10,91 @@
 #include <cstring>
 #include <ctime>
 
+// Namespaces
 using namespace std;
 using namespace cv;
-// OBJECT TRACKING PROTOTYPE
 
-// Convert to string
-#define SSTR( x ) static_cast< std::ostringstream & >( \
-( std::ostringstream() << std::dec << x ) ).str()
-
-// Object Tracking Rectangles!
+// Object Tracking Rectangle struct used to send data back to Unity
 struct Rectangle {
 	Rectangle(int width, int height, int x, int y) : Width(width), Height(height), X(x), Y(y) {}
 	int Width, Height, X, Y;
 };
 
-CascadeClassifier _bodyCascade;
-String _windowName = "Unity OpenCV Prototype #2";
+// Key parameters / variables.
+CascadeClassifier _objectCascade;
+String _windowName = "Mindful Garden OpenCV Test w/ ";
 VideoCapture _capture;
 int _scale = 1;
 Ptr<Tracker> tracker;
 string trackerType;
 Rect2d patientBox;
 bool patientSet;
-std::vector<Rect> Bodies;
+std::vector<Rect> Objects;
+int maxObjects = 0;
 
 
 extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& outCameraHeight)
 {
-	// Load LBP face cascade.
-	if (!_bodyCascade.load("haarcascade_frontalface_default.xml"))
+	// Load the chosen cascade file
+	if (!_objectCascade.load("haarcascade_frontalface_default.xml"))
 		return -1;
 
-	// Open the stream.
+	// Open the Webcam stream.
+	// This can be done in Unity, but we will need to modify the frame to return BGR color 
+	// https://answers.opencv.org/question/202312/create-dll-using-trackerkcf-for-a-unity-project-crash-when-updating-the-tracker-with-the-dll
 	_capture.open(0);
 	if (!_capture.isOpened())
 		return -2;
 
+	// Set the Camera Width and Height
 	outCameraWidth = _capture.get(CAP_PROP_FRAME_WIDTH);
 	outCameraHeight = _capture.get(CAP_PROP_FRAME_HEIGHT);
 
 
 }
-extern "C" void __declspec(dllexport) __stdcall  SetPatient(Rect2d patientBoxData)
+// Set the Scale used for the calculations (Set in Unity) 
+extern "C" void __declspec(dllexport) __stdcall SetScale(int scale)
 {
-	patientBox = Bodies[0];
-	patientSet = true;
-	Mat frame;
-
-	_capture >> frame;
-	bool ok = _capture.read(frame);
-
-	// List of tracker types in OpenCV 3.4.1
-	string trackerTypes[8] = { "BOOSTING", "MIL", "KCF", "TLD","MEDIANFLOW", "GOTURN", "MOSSE", "CSRT" };
-	// vector <string> trackerTypes(types, std::end(types));
-
-	// Create a tracker
-	trackerType = trackerTypes[7];
-
-
-	if (trackerType == "BOOSTING")
-		tracker = TrackerBoosting::create();
-	if (trackerType == "MIL")
-		tracker = TrackerMIL::create();
-	if (trackerType == "KCF")
-		tracker = TrackerKCF::create();
-	if (trackerType == "TLD")
-		tracker = TrackerTLD::create();
-	if (trackerType == "MEDIANFLOW")
-		tracker = TrackerMedianFlow::create();
-	if (trackerType == "GOTURN")
-		tracker = TrackerGOTURN::create();
-	if (trackerType == "MOSSE")
-		tracker = TrackerMOSSE::create();
-	if (trackerType == "CSRT")
-		tracker = TrackerCSRT::create();
-
-
-	rectangle(frame, patientBox, Scalar(255, 0, 0), 2, 1);
-
-	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
-	bool trackerInit = tracker->init(frame, patientBox);
-
+	_scale = scale;
 }
 
-extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
+// Detect the chosen object - to be run once upon init (Could be made more efficient later). 
+extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outObjects, int maxOutObjectsCount, int& outDetectedObjectsCount)
+{
+	// Set the global variable to reuse during refind loops
+	maxObjects = maxOutObjectsCount;
+
+	// Grab the current frame from the webcam, and return if it's empty. 
 	Mat frame;
-	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
 	_capture >> frame;
 	if (frame.empty())
 		return;
 
-	std::vector<Rect> bodies;
+	// Create the array we will use to store the detected objects
+	std::vector<Rect> objects;
+
 	// Convert the frame to grayscale for cascade detection.
 	Mat grayscaleFrame;
 	cvtColor(frame, grayscaleFrame, COLOR_BGR2GRAY);
 	Mat resizedGray;
+
 	// Scale down for better performance.
 	resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
 	equalizeHist(resizedGray, resizedGray);
 
 	// Detect faces.
-	_bodyCascade.detectMultiScale(resizedGray, bodies);
+	_objectCascade.detectMultiScale(resizedGray, objects);
 	int maxArea = 0;
 	int x = 0;
 	int y = 0;
 	int w = 0;
 	int h = 0;
-	// Draw faces.
-	for (size_t i = 0; i < bodies.size(); i++)
+
+	// Determine which object is the largest
+	for (size_t i = 0; i < objects.size(); i++)
 	{
-		//rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
-		Rect2d tracked_position = bodies[i];
+		//rectangle(frame, objects[i], Scalar(255, 0, 0), 2, 1);
+		Rect2d tracked_position = objects[i];
 
 		// Set the Tracker coordinates
 		int _x = int(tracked_position.x);
@@ -128,7 +102,7 @@ extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 		int _w = int(tracked_position.width);
 		int _h = int(tracked_position.height);
 
-		// Get the Biggest Face
+		// Comparing the max areas of each box
 		if (_w * _h > maxArea) {
 			x = _x;
 			y = _y;
@@ -137,25 +111,46 @@ extern "C" void __declspec(dllexport) __stdcall  RefindPatient() {
 			maxArea = w * h;
 		}
 
+		// Set the current object for transferral to Unity.
+		outObjects[i] = Rectangle(objects[i].x, objects[i].y, objects[i].width, objects[i].height);
+		outDetectedObjectsCount++;
+		
+		// If we've hit our max object count, stop looping through the objects.
+		if (outDetectedObjectsCount == maxOutObjectsCount)
+			break;
 	}
+
+	// Select the largest detected object, draw a box around it, and identify it as the patient.
 	if (maxArea > 0) {
+
+		// Set the Patient Box, which will be used/tracked in other functions.
 		patientBox = Rect2d(x, y, w, h);
+		patientSet = true;
+
+		// Draw the box and add text
 		rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
 		putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
+
+		// Create a tracker using the frame and the largest detected object
 		tracker = TrackerCSRT::create();
 		bool trackerInit = tracker->init(frame, patientBox);
 	}
-	Bodies = bodies;
 
-	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
-	// Display debug output.
+	// Save all of the detected objects for future use
+	Objects = objects;
+
+	// Create the window name and show the output
+	putText(frame, _windowName + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 	cv::imshow("Output", frame);
 }
 
 // Expose the function for DLL
 extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, int maxOutTrackingCount, int& outDetectedTrackingCount)
 {
+	// Run Track if the Patient is Set
 	if (patientSet) {
+
+		// Grab the current frame from the webcam, and return if it's empty.  
 		Mat frame;
 		_capture >> frame;
 		if (frame.empty()) {
@@ -165,21 +160,26 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		// Update the tracking result
 		bool ok = tracker->update(frame, patientBox);
 
+		// If the tracker returns true (detected object) then draw a rectangle 
 		if (ok)
 		{
 			// Tracking success : Draw the tracked object
 			rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
 			putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
+
+			// Return the data to Unity (Could be multiple objects if required) 
 			outTracking[0] = Rectangle(patientBox.width, patientBox.height, patientBox.x, patientBox.y);
 		}
 		else
 		{
-			// Tracking failure detected.
-			RefindPatient();
+			// Tracking failure detected. Redetect the patient 
+			int outDetectedObjectsCount = 0;
+			Rectangle* outObjects{};
+			Detect(outObjects, maxObjects, outDetectedObjectsCount);
 		}
 
 		// Display tracker type on frame
-		putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
+		putText(frame, _windowName + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 
 		// Display frame.
 		cv::imshow("Output", frame);
@@ -187,79 +187,10 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 
 }
 
+// Close the Webcam and close any additional windows
 extern "C" void __declspec(dllexport) __stdcall  Close()
 {
 	_capture.release();
 }
 
-extern "C" void __declspec(dllexport) __stdcall SetScale(int scale)
-{
-	_scale = scale;
-}
 
-extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outBodies, int maxOutBodiesCount, int& outDetectedBodiesCount)
-{
-	Mat frame;
-	// >> shifts right and adds either 0s, if value is an unsigned type, or extends the top bit (to preserve the sign) if its a signed type.
-	_capture >> frame;
-	if (frame.empty())
-		return;
-
-	std::vector<Rect> bodies;
-	// Convert the frame to grayscale for cascade detection.
-	Mat grayscaleFrame;
-	cvtColor(frame, grayscaleFrame, COLOR_BGR2GRAY);
-	Mat resizedGray;
-	// Scale down for better performance.
-	resize(grayscaleFrame, resizedGray, Size(frame.cols / _scale, frame.rows / _scale));
-	equalizeHist(resizedGray, resizedGray);
-
-	// Detect faces.
-	_bodyCascade.detectMultiScale(resizedGray, bodies);
-	int maxArea = 0;
-	int x = 0;
-	int y = 0;
-	int w = 0;
-	int h = 0;
-	// Draw faces.
-	for (size_t i = 0; i < bodies.size(); i++)
-	{
-		//rectangle(frame, bodies[i], Scalar(255, 0, 0), 2, 1);
-		Rect2d tracked_position = bodies[i];
-
-		// Set the Tracker coordinates
-		int _x = int(tracked_position.x);
-		int _y = int(tracked_position.y);
-		int _w = int(tracked_position.width);
-		int _h = int(tracked_position.height);
-
-		// Get the Biggest Face
-		if (_w * _h > maxArea) {
-			x = _x;
-			y = _y;
-			w = _w;
-			h = _h;
-			maxArea = w * h;
-		}
-
-		// Send to application.
-		outBodies[i] = Rectangle(bodies[i].x, bodies[i].y, bodies[i].width, bodies[i].height);
-		outDetectedBodiesCount++;
-
-		if (outDetectedBodiesCount == maxOutBodiesCount)
-			break;
-	}
-	if (maxArea > 0) {
-		patientBox = Rect2d(x, y, w, h);
-		rectangle(frame, patientBox, Scalar(255, 0, 137), 3, 1);
-		
-		putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
-
-		tracker = TrackerCSRT::create();
-		bool trackerInit = tracker->init(frame, patientBox);
-	}
-	Bodies = bodies;
-	putText(frame, "Mindful Garden OpenCV Test w/ " + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
-	// Display debug output.
-	cv::imshow("Output", frame);
-}

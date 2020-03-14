@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 using UnityEngine;
-
 
 public class OpenCVBodyTracking : MonoBehaviour
 {
@@ -20,28 +17,27 @@ public class OpenCVBodyTracking : MonoBehaviour
         internal static extern int SetScale(int downscale);
 
         [DllImport("OpenCV")]
-        internal static extern int SetPatient(CvRectangle patientBody);
-
-        [DllImport("OpenCV")]
         internal unsafe static extern void Detect(CvRectangle* outBodies, int maxOutBodiesCount, ref int outDetectedBodiesCount);
-
 
         [DllImport("OpenCV")]
         internal unsafe static extern int Track(CvRectangle* outTracking, int maxTrackingCount, ref int outTrackingsCount);
     }
+
     [StructLayout(LayoutKind.Sequential, Size = 12)]
 
+    // Set the struct used to retrieve the box data from OpenCV
     public struct CvRectangle
     {
         public int Width, Height, X, Y;
     }
 
+    // Set variables and parameters
     public static List<Vector2> NormalizedTrackingPositions { get; private set; }
     public static List<Vector2> NormalizedBodyPositions { get; private set; }
     public static Vector2 CameraResolution;
 
     /// Downscale factor to speed up detection.
-    [SerializeField] int DetectionDownScale = 1;
+    [SerializeField] private int DetectionDownScale = 1;
     [SerializeField] private int _maxTrackCount = 5;
 
     private bool _ready;
@@ -51,14 +47,16 @@ public class OpenCVBodyTracking : MonoBehaviour
     public int frameRate = 0;
 
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         initOpenCV();
     }
 
-    void initOpenCV()
+    private void initOpenCV()
     {
         int camWidth = 0, camHeight = 0;
+
+        // Run the OpenV Init script, and log the result
         int result = OpenCVInterop.Init(ref camWidth, ref camHeight);
         if (result < 0)
         {
@@ -81,6 +79,7 @@ public class OpenCVBodyTracking : MonoBehaviour
             return;
         }
 
+        // Prepare all variables and arrays for OpenCV
         CameraResolution = new Vector2(camWidth, camHeight);
         _bodies = new CvRectangle[_maxTrackCount];
         _tracking = new CvRectangle[_maxTrackCount];
@@ -90,10 +89,10 @@ public class OpenCVBodyTracking : MonoBehaviour
         OpenCVInterop.SetScale(DetectionDownScale);
         DetectBodies();
         frameRate = 0;
-        _ready = SetPatient();
+        _ready = true;
     }
 
-    void OnApplicationQuit()
+    private void OnApplicationQuit()
     {
         if (_ready)
         {
@@ -102,28 +101,32 @@ public class OpenCVBodyTracking : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        frameRate++;
+        // Wait for init
         if (!_ready)
         {
             return;
         }
         else
         {
-            if (frameRate % 60 == 0)
+            frameRate++;
+            // Detect the bodies every 240 frames for efficiency and accuracy
+            if (frameRate % 240 == 0)
             {
                 DetectBodies();
             }
+            // Otherwise continue tracking the existing object
             else
             {
                 PatientTracking();
             }
         }
-
     }
-    void PatientTracking()
+
+    private void PatientTracking()
     {
+        // Unsafe codeblock to retrieve data from OpenCV 
         int detectedTrackingCount = 0;
         unsafe
         {
@@ -133,16 +136,21 @@ public class OpenCVBodyTracking : MonoBehaviour
             }
         }
 
+        // Record the Normalized Tracking Positions
         NormalizedTrackingPositions.Clear();
         for (int i = 0; i < detectedTrackingCount; i++)
         {
             NormalizedTrackingPositions.Add(new Vector2((_tracking[i].X * DetectionDownScale) / CameraResolution.x, 1f - ((_tracking[i].Y * DetectionDownScale) / CameraResolution.y)));
         }
+
+        patientBody = _tracking[0];
+        // Log current patient position for debugging
         Debug.Log("Patient At: (x=" + _tracking[0].X + " y=" + _tracking[0].Y + " width=" + _tracking[0].Width + " height=" + _tracking[0].Height + ")");
     }
 
-    void DetectBodies()
+    private void DetectBodies()
     {
+        // Unsafe codeblock to retrieve data from OpenCV 
         int detectedBodyCount = 0;
         unsafe
         {
@@ -152,29 +160,12 @@ public class OpenCVBodyTracking : MonoBehaviour
             }
         }
 
+        // Record the Normalized Tracking Positions
         NormalizedBodyPositions.Clear();
         for (int i = 0; i < detectedBodyCount; i++)
         {
             NormalizedBodyPositions.Add(new Vector2((_bodies[i].X * DetectionDownScale) / CameraResolution.x, 1f - ((_bodies[i].Y * DetectionDownScale) / CameraResolution.y)));
         }
-    }
-    bool SetPatient()
-    {
-        // Set the Patient's body as the first body detected
-        patientBody = _bodies[0];
-
-        // If the Patient Body information is not null/unset, the initialization is ready. 
-        if (patientBody.X != 0)
-        {
-            unsafe
-            {
-                    OpenCVInterop.SetPatient(patientBody);               
-            }
-            return true;
-        } else
-        {
-            return false;
-        }
+        patientBody = _tracking[0];
     }
 }
-
