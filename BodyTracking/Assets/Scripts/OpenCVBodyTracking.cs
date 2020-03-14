@@ -7,8 +7,8 @@ public class OpenCVBodyTracking : MonoBehaviour
     // Define the functions which can be called from the .dll.
     internal static class OpenCVInterop
     {
-        [DllImport("OpenCV")]
-        internal static extern int Init(ref int outCameraWidth, ref int outCameraHeight);
+        [DllImport("OpenCV", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
+        internal unsafe static extern int Init(ref int outCameraWidth, ref int outCameraHeight, ref int tracker, ref int cascade);
 
         [DllImport("OpenCV")]
         internal static extern int Close();
@@ -36,7 +36,11 @@ public class OpenCVBodyTracking : MonoBehaviour
     public static List<Vector2> NormalizedBodyPositions { get; private set; }
     public static Vector2 CameraResolution;
 
-    /// Downscale factor to speed up detection.
+    public enum TrackerTypes { BOOSTING = 0, MIL = 1, KCF = 2, TLD = 3, MEDIANFLOW = 4, GOTURN = 5, MOSSE = 6, CSRT = 7 }
+    public enum CascadeTypes { HAAR_FACE = 0, HAAR_BODY = 1, HAAR_UPPERBODY = 2, LBP_FACE = 3}
+    public TrackerTypes trackerTypes = TrackerTypes.CSRT;
+    public CascadeTypes cascadeTypes = CascadeTypes.HAAR_FACE;
+    /// Fields available in the inspector
     [SerializeField] private int DetectionDownScale = 1;
     [SerializeField] private int _maxTrackCount = 5;
 
@@ -44,20 +48,25 @@ public class OpenCVBodyTracking : MonoBehaviour
     private CvRectangle[] _tracking;
     private CvRectangle[] _bodies;
     private CvRectangle patientBody;
-    public int frameRate = 0;
+    private int frameRate = 0;
 
     // Start is called before the first frame update
     private void Start()
     {
+     
         initOpenCV();
     }
 
     private void initOpenCV()
     {
         int camWidth = 0, camHeight = 0;
+        int tracker = (int)trackerTypes;
+        int cascade = (int)cascadeTypes;
 
+  
+        int result = OpenCVInterop.Init(ref camWidth, ref camHeight, ref tracker, ref cascade);   
         // Run the OpenV Init script, and log the result
-        int result = OpenCVInterop.Init(ref camWidth, ref camHeight);
+
         if (result < 0)
         {
             if (result == -1)
@@ -88,8 +97,8 @@ public class OpenCVBodyTracking : MonoBehaviour
         NormalizedTrackingPositions = new List<Vector2>();
         OpenCVInterop.SetScale(DetectionDownScale);
         DetectBodies();
-        frameRate = 0;
-        _ready = true;
+        frameRate = 0; 
+        _ready = true; 
     }
 
     private void OnApplicationQuit()
@@ -121,7 +130,7 @@ public class OpenCVBodyTracking : MonoBehaviour
             {
                 PatientTracking();
             }
-        }
+        } 
     }
 
     private void PatientTracking()

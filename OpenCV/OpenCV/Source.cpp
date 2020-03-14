@@ -22,7 +22,7 @@ struct Rectangle {
 
 // Key parameters / variables.
 CascadeClassifier _objectCascade;
-String _windowName = "Mindful Garden OpenCV Test w/ ";
+String _windowName = "Mindful Garden";
 VideoCapture _capture;
 int _scale = 1;
 Ptr<Tracker> tracker;
@@ -32,16 +32,50 @@ bool patientSet;
 std::vector<Rect> Objects;
 int maxObjects = 0;
 
+vector<string> trackerTypes = { "BOOSTING", "MIL", "KCF", "TLD", "MEDIANFLOW", "GOTURN", "MOSSE", "CSRT" };
+vector<string> cascadeTypes = { "haarcascade_frontalface_default.xml", "haarcascade_fullbody.xml", "haarcascade_upperbody.xml", "lbpcascade_frontalface_improved.xml" };
 
-extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& outCameraHeight)
+// create tracker by name
+Ptr<Tracker> createTrackerByName(string type)
 {
-	// Load the chosen cascade file
-	if (!_objectCascade.load("haarcascade_frontalface_default.xml"))
+	Ptr<Tracker> currentTracker;
+	if (type == trackerTypes[0])
+		currentTracker = TrackerBoosting::create();
+	else if (type == trackerTypes[1])
+		currentTracker = TrackerMIL::create();
+	else if (type == trackerTypes[2])
+		currentTracker = TrackerKCF::create();
+	else if (type == trackerTypes[3])
+		currentTracker = TrackerTLD::create();
+	else if (type == trackerTypes[4])
+		currentTracker = TrackerMedianFlow::create();
+	else if (type == trackerTypes[5])
+		currentTracker = TrackerGOTURN::create();
+	else if (type == trackerTypes[6])
+		currentTracker = TrackerMOSSE::create();
+	else if (type == trackerTypes[7])
+		currentTracker = TrackerCSRT::create();
+	else {
+		currentTracker = TrackerCSRT::create();
+	}
+	return currentTracker;
+}
+
+
+extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& outCameraHeight, int& chosenTracker, int& chosenCascade)
+{
+	// Collect the cascade and tracker types from the inspector in Unity
+	string cascade = cascadeTypes[chosenCascade];
+	string trackerType = trackerTypes[chosenTracker];
+	_windowName = "Mindful Garden Prototype w/ " + trackerType;
+
+	// Load the chosen (in Unity) cascade file
+	if (!_objectCascade.load(cascade))
 		return -1;
 
 	// Open the Webcam stream.
 	// This can be done in Unity, but we will need to modify the frame to return BGR color 
-	// https://answers.opencv.org/question/202312/create-dll-using-trackerkcf-for-a-unity-project-crash-when-updating-the-tracker-with-the-dll
+	// answers.opencv.org/question/202312/create-dll-using-trackerkcf-for-a-unity-project-crash-when-updating-the-tracker-with-the-dll
 	_capture.open(0);
 	if (!_capture.isOpened())
 		return -2;
@@ -50,6 +84,8 @@ extern "C" int __declspec(dllexport) __stdcall  Init(int& outCameraWidth, int& o
 	outCameraWidth = _capture.get(CAP_PROP_FRAME_WIDTH);
 	outCameraHeight = _capture.get(CAP_PROP_FRAME_HEIGHT);
 
+	// Set the chosen tracker type from Unity
+	return 1;
 
 }
 // Set the Scale used for the calculations (Set in Unity) 
@@ -132,7 +168,7 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outObjects, i
 		putText(frame, "Patient", Point(((patientBox.x + patientBox.width)), (patientBox.y + patientBox.height + 20)), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 137), 2);
 
 		// Create a tracker using the frame and the largest detected object
-		tracker = TrackerCSRT::create();
+		tracker = createTrackerByName(trackerType);
 		bool trackerInit = tracker->init(frame, patientBox);
 	}
 
@@ -140,7 +176,7 @@ extern "C" void __declspec(dllexport) __stdcall Detect(Rectangle * outObjects, i
 	Objects = objects;
 
 	// Create the window name and show the output
-	putText(frame, _windowName + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
+	putText(frame, _windowName, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 	cv::imshow("Output", frame);
 }
 
@@ -179,7 +215,8 @@ extern "C" void __declspec(dllexport) __stdcall  Track(Rectangle * outTracking, 
 		}
 
 		// Display tracker type on frame
-		putText(frame, _windowName + trackerType, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
+
+		putText(frame, _windowName, Point(120, 40), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(255, 0, 137), 2);
 
 		// Display frame.
 		cv::imshow("Output", frame);

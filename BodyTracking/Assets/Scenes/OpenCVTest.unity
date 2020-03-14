@@ -323,6 +323,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86e119c2bbc9adf44bf768ea4b00cb16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  trackerTypes: 7
+  cascadeTypes: 0
   DetectionDownScale: 1
   _maxTrackCount: 5
 --- !u!4 &1965871320
